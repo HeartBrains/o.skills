@@ -21,6 +21,13 @@ Use this skill to start a new parking-rental payment and slip-record project bas
 - Google Sheets, LINE, and email are optional integrations. Start disabled, keep D1 authoritative, and avoid sending unnecessary personal data to integrations. Sheets is a one-way mirror; edits in the Sheet do not update D1. The default D1 + R2 setup does not need Google account, OAuth, Service Account, or Google API credentials.
 - Use Bangkok time for user-facing dates and `YYYY-MM` rental periods. Store event timestamps in UTC.
 
+## Reference technology stack
+
+- **Frontend:** static web UI built with Vite, TypeScript, and Tailwind CSS v4. Use `qrcode` for receipts and `html2pdf.js` for PDF downloads; this reference implementation does not use React or Next.js.
+- **Backend:** TypeScript ES-module Cloudflare Worker serving static assets and JSON APIs; Cloudflare D1 (SQLite) is the record store and private R2 stores slip files. Use parameterized D1 SQL rather than introducing an ORM by default.
+- **Operations:** Wrangler manages Worker development/deployment, bindings, D1 migrations, static asset builds, and scheduled jobs.
+- **Security/integrations:** Cloudflare Access plus Worker-side JWT validation and admin allowlisting; Turnstile for payer submissions. Apps Script/Sheets, LINE, and email are optional and start disabled.
+
 ## Scaffold workflow
 
 1. **Inspect and isolate.** Review the current branch, local instructions, requirements, migrations, Worker routes, web UI, and config examples. Never read or copy live `.dev.vars`, secret files, production database contents, license plates, current account IDs, or deployed resource IDs into a new project. Start from a clean new repository or explicitly requested target directory; keep the original project untouched.
