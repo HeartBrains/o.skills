@@ -20,6 +20,15 @@ The `kyafQ42026` repository was not mounted in the environment where this skill 
 - **Hosting:** Hostinger Cloud Startup serves WordPress/PHP and, if the plan/account supports it, can connect a GitHub branch for automatic file deployment. Verify the current hPanel feature availability, selected branch, deployment history, PHP version, and SSH/SFTP access in the actual account.
 - **Source control:** GitHub is the source of versioned custom code and the trigger for CI/CD. WordPress database content and uploaded media are backed up separately and are not committed to Git.
 
+## GitHub release and plugin handoff
+
+- Before pushing, inspect the target repository's current workflow triggers and the changed-file paths. Push only through the repository's established branch/PR process, then check the actual GitHub Actions run and report its status.
+- A successful frontend build does not install or deploy a WordPress plugin. If no workflow matches the changed paths, say so; do not trigger an unrelated workflow or claim that deployment occurred.
+- For WordPress plugin edits, update the plugin source and matching distributable ZIP, check that the ZIP has the expected plugin directory structure, and push both through GitHub. Stop after the source/ZIP handoff: do not upload, install, activate, or test-install the plugin on WordPress, including staging, unless the user explicitly changes this boundary.
+- For frontend edits, use the verified GitHub workflow and verify the requested public page after it completes. Do not edit or sync the KYAF application repository when the request is limited to this skill or another repository.
+
+When the task uses `HeartBrains/khaoyaiart-next`, its current `deploy.yml` builds the static frontend on matching pushes to `master`, `wp_content_updated` repository dispatch, or manual workflow dispatch. Its push path filter excludes `wp-plugin/**`; a plugin-only push does not start that workflow automatically, and that workflow does not install plugins. Recheck the workflow before relying on these details.
+
 ## Protect the live WordPress installation during deploys
 
 Hostinger Git deployment can overwrite files in its target directory, and its setup may require the selected install path to be empty. Never point a whole-repository deployment at a populated WordPress `public_html` directory unless the repository intentionally contains the complete deployable WordPress tree and the owner has approved that replacement.
@@ -28,9 +37,9 @@ For an existing live WordPress site:
 
 - Prefer deploying only the version-controlled child theme, custom plugin, or frontend artifact to its exact target directory. Keep WordPress core, `wp-config.php`, `.htaccess`, uploads, cache, backups, and user content outside a broad sync/deploy operation.
 - If using Hostinger's native Git integration, set a deliberate repository root and install path, verify what files the next deploy will replace, and use an isolated/empty target when required. Check the deployment history after each first deployment.
-- If native deployment cannot target only the intended code safely, use GitHub Actions after CI to transfer only the allowed paths over SFTP/SSH. Confirm SSH/SFTP is enabled for this Cloud plan and restrict the deployment user to the smallest practical directory.
+- If native deployment cannot target only the intended code safely, a separately authorized deployment task may use GitHub Actions after CI to transfer only the allowed paths over SFTP/SSH. Confirm SSH/SFTP is enabled for this Cloud plan and restrict the deployment user to the smallest practical directory. This is not part of the plugin source/ZIP handoff above.
 - Do not run file deletion/synchronization flags against the site root without a reviewed file allowlist and a tested rollback. Never deploy database dumps, `.env`, `wp-config.php`, `wp-content/uploads`, cache, or backup archives from Git.
-- Back up both the WordPress database and files before plugin, theme, JetEngine schema, or migration changes. Test upgrades on a staging copy first.
+- Before a separately authorized plugin, theme, JetEngine schema, or migration installation, confirm backups of the WordPress database and files and use the approved staging process. For routine plugin edits under this skill's current handoff boundary, package and push only; do not install or activate.
 
 Hostinger's Git integration and GitHub Actions are different layers. Choose one deployment mechanism and document it:
 
@@ -54,9 +63,9 @@ Do not enable both deployment mechanisms for the same path unless the duplicatio
 1. **Inspect before editing.** Read repository instructions, project README, GitHub Actions workflows, package/composer files, WordPress theme/plugin structure, JetEngine exports or schema notes, GraphQL plugin/version, and deployment configuration. Do not read secret files or dump production data. Confirm the actual Hostinger target path and which branch auto-deploys.
 2. **Inventory the current system.** Record the frontend framework/build, WordPress and PHP versions, active GraphQL integration, JetEngine modules/CPTs/CCTs/fields/relations, public vs protected data, API base URL, staging environment, and current deploy mechanism. If a detail is unavailable, state the assumption and ask before changing that part.
 3. **Separate code from content.** Keep custom themes/plugins and frontend source in Git. Keep database records, JetEngine admin configuration, media uploads, and secrets in their intended systems. Commit exported JetEngine configuration only when the export/import workflow is verified and the export contains no private user data or credentials.
-4. **Define CI checks.** Use the repository's existing commands. Add appropriate PHP lint/static checks, Composer validation, JavaScript/TypeScript lint/build/tests, and GraphQL query/schema checks where the project has the tooling. CI should validate pull requests and the production branch; do not add fake checks that always pass.
+4. **Use real CI checks.** Use the repository's existing commands and inspect its path filters before pushing. Where this task calls for GitHub CI/CD, push through the repository's normal process and inspect the run result. Add PHP lint/static checks, Composer validation, JavaScript/TypeScript build checks, or GraphQL validation only when the project has the relevant tooling and the task includes CI setup; do not add fake checks that always pass. A push for paths excluded by workflow filters does not count as a CI run.
 5. **Protect releases.** Use pull requests and branch protection for the production branch. Review the changed-file list and deployment allowlist. Back up staging/production data before database or JetEngine schema changes; prefer backward-compatible schema changes and staged rollout.
-6. **Deploy through the selected Hostinger path.** For native Hostinger Git, verify the connected GitHub repository, production branch, auto-deploy state, and exact install path in hPanel. For GitHub Actions SFTP/SSH, deploy only allowed paths after checks pass. Do not publish or alter production without the owner's explicit request.
+6. **Respect the requested release boundary.** For an explicitly requested frontend release, verify the selected Hostinger path and deploy only through the configured workflow. For plugin edits covered by the current handoff, package and push source plus ZIP, then stop before installing or activating on WordPress.
 7. **Verify after deployment.** Check Hostinger deployment status/commit, HTTPS frontend, WordPress admin, GraphQL endpoint status and expected fields, media URLs, forms/previews, and critical pages. Confirm no private data leaked, no uploads/config files were overwritten, and rollback/backup remains available.
 
 ## Settings and secrets checklist
