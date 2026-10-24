@@ -18,7 +18,7 @@ Use this skill to start a new parking-rental payment and slip-record project bas
 - Keep payer submission public but protected by server-verified Turnstile, input validation, rate limits, file type/size checks, and idempotency. Never expose tenant contact data, payment history, or slip objects through public endpoints.
 - A submitted slip is provisional evidence, not proof of bank settlement. Support manual approval/rejection and manual allocation of an amount that differs from rent (fees, penalties, or partial/extra payment). Duplicate submissions should be retained and flagged for review rather than silently discarded.
 - Generate a receipt/reference with a QR code that opens a limited status/check page; provide a printable/downloadable PDF receipt. Do not make the QR reveal private slip files or personal information.
-- Google Sheets, LINE, and email are optional integrations. Start disabled, keep D1 authoritative, and avoid sending unnecessary personal data to integrations. Sheets is a one-way mirror; edits in the Sheet do not update D1.
+- Google Sheets, LINE, and email are optional integrations. Start disabled, keep D1 authoritative, and avoid sending unnecessary personal data to integrations. Sheets is a one-way mirror; edits in the Sheet do not update D1. The default D1 + R2 setup does not need Google account, OAuth, Service Account, or Google API credentials.
 - Use Bangkok time for user-facing dates and `YYYY-MM` rental periods. Store event timestamps in UTC.
 
 ## Scaffold workflow
@@ -64,11 +64,7 @@ Do not copy the current app's hostname, IDs, administrator addresses, or resourc
 | `LINE_CHANNEL_ACCESS_TOKEN` | LINE enabled | LINE Messaging API credential. |
 | `LINE_CHANNEL_SECRET` | LINE webhook enabled | Verify incoming LINE webhook signatures. |
 | `BREVO_API_KEY` | `EMAIL_PROVIDER=brevo` | Brevo API credential. |
-| `GOOGLE_OAUTH_CLIENT_ID` | Legacy Drive adapter only | OAuth client used to access the owner's My Drive. Not required for private R2. |
-| `GOOGLE_OAUTH_CLIENT_SECRET` | Legacy Drive adapter only | Keep with the legacy Drive OAuth credentials. |
-| `GOOGLE_OAUTH_REFRESH_TOKEN` | Legacy Drive adapter only | Highly sensitive owner OAuth refresh token. Keep only while old Drive records need access. |
-
-Never put secret values in Git, prompts, logs, issue descriptions, screenshots, or generated skill files. Generate unique secrets for each environment and rotate credentials if they are exposed.
+Never put secret values in Git, prompts, logs, issue descriptions, screenshots, or generated skill files. Generate unique secrets for each environment and rotate credentials if they are exposed. Do not request or configure Google OAuth, Service Account, or Google API credentials for this R2-based scaffold.
 
 ### Local-only setting
 
@@ -97,11 +93,11 @@ Create new resources and set project-specific names/IDs in `wrangler.jsonc` (or 
 - Keep the Access allow policy and `ADMIN_EMAILS` in sync. A 403 after Access login means the authenticated email is not in the Worker allowlist; do not solve it by bypassing JWT validation.
 - Create a Turnstile widget that allows the exact production hostname. Configure its public/secret keys and use the action `payment` consistently in the browser and Worker verification.
 
-### Optional Google Sheets receiver
+### Optional Google Sheets mirror (no Google account credentials)
 
 When enabling Sheets, create a **new private Sheet** and deploy the matching Apps Script receiver from `scripts/google-sheets-webhook.gs`:
 
-- Script Properties: `SPREADSHEET_ID` and `SHEETS_WEBHOOK_SECRET`.
+- Script Properties: `SPREADSHEET_ID` and `SHEETS_WEBHOOK_SECRET`. The spreadsheet ID identifies the destination; it is not a password. `SHEETS_WEBHOOK_SECRET` is a random shared HMAC signing secret generated for this application, not a Google account credential.
 - Deploy as a Web App executing as the Sheet owner. If the endpoint must be reachable by the Worker without user OAuth, allow the Web App endpoint to receive requests and rely on the receiver's timestamped HMAC verification. The Sheet itself stays private.
 - Set Worker `SHEETS_WEBHOOK_URL`, `SHEETS_WEBHOOK_SECRET`, then set `SHEETS_ENABLED=true` only after an authenticated test delivery succeeds.
 - Keep D1 authoritative; Sheet edits do not flow back. Do not expose private slip images with public links or spreadsheet `IMAGE()` formulas.
@@ -113,13 +109,9 @@ When enabling Sheets, create a **new private Sheet** and deploy the matching App
 - Cloudflare Email Service: set up the sending domain/service and `send_email` binding named `EMAIL`; set `EMAIL_PROVIDER=cloudflare`, `EMAIL_FROM`, and `ADMIN_EMAIL`. Inbound Email Routing alone does not provide outbound sending.
 - Keep both integrations disabled until every required field is configured and a test message is verified.
 
-### Optional legacy Google Drive
+### Legacy Drive records
 
-New projects should use private R2. Only configure Drive if existing Drive-backed records must remain viewable or the owner explicitly selects Drive:
-
-- Worker variable: `GOOGLE_DRIVE_ROOT_FOLDER_ID` (new project's root folder ID) and `GOOGLE_DRIVE_ADMIN_EMAILS` (emails allowed to access legacy files).
-- Worker secrets: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_REFRESH_TOKEN` from the Drive owner's OAuth flow.
-- Verify the OAuth owner can access the root folder and restrict file sharing to admin accounts. Do not make files public. Do not remove these settings until all legacy records are migrated or no longer need retrieval.
+This scaffold uses private R2 for new projects and intentionally has no Google Drive credential checklist. If an existing project must continue reading Drive-backed records, treat that as a separately approved migration requirement; document and configure its legacy storage adapter outside this baseline skill. Do not add Drive credentials to a new R2-only deployment.
 
 ## New project acceptance criteria
 
