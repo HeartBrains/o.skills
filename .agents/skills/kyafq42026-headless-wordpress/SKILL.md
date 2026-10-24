@@ -29,6 +29,22 @@ When working in `HeartBrains/khaoyaiart-next`, use this verified architecture as
 - Keep the owning site key with each related record. Construct links from the target record's own site, content type, and slug: use `/bk/<type>/<slug>/` for `bkkk` and `/kyaf/<type>/<slug>/` for `kyaf`. Do not derive a related record's destination from the page currently being viewed. Preserve the one-way relation behavior unless the owner requests reciprocal relations.
 - Detail routes are implemented under both site prefixes and use separate site-specific page/detail components. For new route prefixes or content types, update the route matching and detail shell in `app/not-found.tsx` as well as the corresponding route page and component; verify the actual route map before relying on this instruction.
 
+### Cross-site relationship fields
+
+In the current `kyaf-catalog-schema` plugin, cross-site related records use custom post meta and an editor meta box; do not mistake this implementation for a JetEngine native relation. Verify the active plugin and field keys before changing or migrating the data model.
+
+| Field | Stored form | Purpose |
+| --- | --- | --- |
+| `related_content_ids` | Ordered array of integer WordPress post IDs | Editable source of truth. The picker saves IDs in display order; sanitization removes invalid/duplicate IDs. |
+| `related_content_json` | JSON string containing an ordered array of normalized records | Frontend payload regenerated from the selected IDs when the source is saved and when a related target changes. Registered as REST-visible post meta. |
+| `site` | Existing record meta value: `bkkk` or `kyaf` | Identifies each target record's owning site and determines its public route. It is not a relationship direction or a display label. |
+
+Each normalized `related_content_json` item currently contains `id`, `slug`, `type`, bilingual `title` (`en` and `th`), `date`, `image`, `category`, `status`, and `site`. The route type values are `exhibitions`, `activities`, `moving-image`, `artists`, and `blog`; source WordPress post types map to these public route names. `moving-image` currently has a detail route only on BK (`bkkk`). Keep the payload and frontend type allowlist in sync when a route is added or renamed.
+
+The editor picker searches published exhibition, activity, moving-image, artist/residency, and blog records across both site keys. The save path must reject drafts/unpublished targets, unsupported post types or routes, invalid site keys, duplicates, and self-links. Relations are one-way: storing A → B must not silently create B → A. Preserve ordering and allow any number of valid targets unless the owner sets a product limit.
+
+The frontend reads `meta.related_content_json`, parses and validates `site` and `type`, then builds the link from that item's own site and slug. Related cards show the title with the date beneath it and do not display a site-name label; keep the site key in the data for routing. Check an unauthenticated REST response for the relation payload and only expose the fields needed by the public frontend. A meta registration's `show_in_rest` flag alone does not prove the intended public request can read the value when a capability callback is present.
+
 ### Rendering WordPress HTML
 
 - Prefer the existing `utils/richContent.tsx` `RichContent` component where its behavior fits. It decodes a small set of HTML entities, detects HTML, adds links to bare URLs, and renders markup with `dangerouslySetInnerHTML`; plain text is split into paragraphs. It is a client component and **does not sanitize HTML**.
